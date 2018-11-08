@@ -1,48 +1,82 @@
-import React, { Component } from "react";
-import { graphql } from "react-apollo";
-import gql from "graphql-tag";
+import React, { Component } from 'react';
+import { Query } from 'react-apollo';
+import gql from 'graphql-tag';
+
+import AddComment from './AddComment';
+
+const GET_COMMENTS = gql`
+  query Comments($id: String!) {
+    comments(id: $id) {
+      id
+      value
+    }
+  }
+`;
 
 class App extends Component {
+  constructor() {
+    super();
+    this.state = {
+      activeListID: 'list1',
+    };
+  }
   render() {
-    const { data: { loading, people } } = this.props;
     return (
       <main>
         <header>
-          <h1>Apollo Client Error Template</h1>
+          <h1>RefetchQueries Error?</h1>
           <p>
-            This is a template that you can use to demonstrate an error in
-            Apollo Client. Edit the source code and watch your browser window
-            reload with the changes.
+            When there's two active queries in Apollo with the same name,
+            refetchQueries will only refetch the first query that is called.
           </p>
           <p>
-            The code which renders this component lives in{" "}
-            <code>./src/App.js</code>.
+            <strong>Steps to reproduce</strong>
           </p>
-          <p>
-            The GraphQL schema is in <code>./src/graphql/schema</code>.
-            Currently the schema just serves a list of people with names and
-            ids.
-          </p>
-        </header>
-        {loading ? (
-          <p>Loading…</p>
-        ) : (
           <ul>
-            {people.map(person => <li key={person.id}>{person.name}</li>)}
+            <li>Add a comment with list 1 being active in the select.</li>
+            <li>See list 1 being refetched.</li>
+            <li>Select list 2 in the select.</li>
+            <li>Add a comment in list 2.</li>
+            <li>See list 1 being refetched and rendered, not list 2.</li>
           </ul>
-        )}
+          <em>
+            fetchPolicy is set to "network-only", not sure if that can have an
+            impact.
+          </em>
+        </header>
+        <h2>Active list</h2>
+        <select
+          onChange={event =>
+            this.setState({ activeListID: event.target.value })
+          }
+        >
+          <option value="list1">List 1</option>
+          <option value="list2">List 2</option>
+        </select>
+        <h2> Comment List </h2>
+        <p> ActiveListID: {this.state.activeListID} </p>
+        <Query
+          query={GET_COMMENTS}
+          variables={{ id: this.state.activeListID }}
+          fetchPolicy="network-only"
+        >
+          {({ loading, error, data }) => {
+            if (loading) return 'Loading...';
+            if (error) return `Error! ${error.message}`;
+
+            return (
+              <ul>
+                {data.comments.map(comment => (
+                  <li key={comment.id}>{comment.value}</li>
+                ))}
+              </ul>
+            );
+          }}
+        </Query>
+        <AddComment listID={this.state.activeListID} />
       </main>
     );
   }
 }
 
-export default graphql(
-  gql`
-    query ErrorTemplate {
-      people {
-        id
-        name
-      }
-    }
-  `
-)(App);
+export default App;

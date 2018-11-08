@@ -1,33 +1,57 @@
-import {
-  GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLID,
-  GraphQLString,
-  GraphQLList,
-} from 'graphql';
+import { makeExecutableSchema, addMockFunctionsToSchema } from 'graphql-tools';
 
-const PersonType = new GraphQLObjectType({
-  name: 'Person',
-  fields: {
-    id: { type: GraphQLID },
-    name: { type: GraphQLString },
-  },
-});
+const commentsData = {
+  list1: [
+    { id: 1, value: 'List 1 Comment 1' },
+    { id: 2, value: 'List 1 Comment 2' },
+    { id: 3, value: 'List 1 Comment 3' },
+  ],
+  list2: [
+    { id: 1, value: 'List 2 Comment 1' },
+    { id: 2, value: 'List 2 Comment 2' },
+    { id: 3, value: 'List 2 Comment 3' },
+  ],
+};
 
-const peopleData = [
-  { id: 1, name: 'John Smith' },
-  { id: 2, name: 'Sara Smith' },
-  { id: 3, name: 'Budd Deey' },
-];
+const typeDefs = `
+  type Comment {
+    id: String
+    value: String
+  }
 
-const QueryType = new GraphQLObjectType({
-  name: 'Query',
-  fields: {
-    people: {
-      type: new GraphQLList(PersonType),
-      resolve: () => peopleData,
+  type Query {
+    comments(id: String!): [Comment]
+  }
+  type Mutation {
+    addComment(listID: String!, value: String!): Comment
+  }
+`;
+
+const mocks = {
+  Query: () => ({
+    comments: (_root, { id }) => {
+      return commentsData[id];
     },
-  },
+  }),
+  Mutation: () => ({
+    addComment: (_root, { listID, value }) => {
+      const newComment = {
+        id: commentsData[listID][commentsData[listID].length - 1].id + 1,
+        value,
+      };
+      commentsData[listID].push(newComment);
+
+      return newComment;
+    },
+  }),
+};
+
+const schema = makeExecutableSchema({
+  typeDefs,
+});
+addMockFunctionsToSchema({
+  schema,
+  mocks,
 });
 
-export const schema = new GraphQLSchema({ query: QueryType });
+export default schema;
